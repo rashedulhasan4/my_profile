@@ -17,12 +17,19 @@ const MONGODB_URI = process.env.MONGODB_URI;
 const DB_FILE = path.join(process.cwd(), 'db.json');
 
 // Database Mode: MongoDB or Local JSON
-const isMongoDB = !!MONGODB_URI;
+let isMongoDBConnected = false;
+const MONGODB_URI = process.env.MONGODB_URI;
 
-if (isMongoDB) {
-  mongoose.connect(MONGODB_URI!)
-    .then(() => console.log('Connected to MongoDB Atlas'))
-    .catch(err => console.error('MongoDB connection error:', err));
+if (MONGODB_URI && MONGODB_URI.startsWith('mongodb') && !MONGODB_URI.includes('<user>')) {
+  mongoose.connect(MONGODB_URI, { serverSelectionTimeoutMS: 5000 })
+    .then(() => {
+      isMongoDBConnected = true;
+      console.log('Connected to MongoDB Atlas');
+    })
+    .catch(err => {
+      isMongoDBConnected = false;
+      console.error('MongoDB connection failed, falling back to Local JSON');
+    });
 } else {
   console.log('Running in Local JSON mode (db.json)');
 }
@@ -95,92 +102,123 @@ const authenticate = (req: any, res: any, next: any) => {
 app.post('/api/auth/login', async (req, res) => {
   const { email, password } = req.body;
   
-  let user;
-  if (isMongoDB) {
-    user = await UserModel.findOne({ email });
-  } else {
+  try {
+    let user;
+    if (isMongoDBConnected) {
+      user = await UserModel.findOne({ email }).maxTimeMS(2000);
+    } else {
+      const db = await getLocalDB();
+      user = db.users.find((u: any) => u.email === email);
+    }
+
+    if (!user) return res.status(401).json({ error: 'Invalid credentials' });
+
+    const isMatch = await bcrypt.compare(password, user.password);
+    if (!isMatch) return res.status(401).json({ error: 'Invalid credentials' });
+
+    const token = jwt.sign({ id: user._id || user.id, email: user.email }, JWT_SECRET, { expiresIn: '7d' });
+    res.json({ token, user: { email: user.email } });
+  } catch (err) {
+    console.error("Login error, falling back to local", err);
     const db = await getLocalDB();
-    user = db.users.find((u: any) => u.email === email);
+    const user = db.users.find((u: any) => u.email === email);
+    if (user && await bcrypt.compare(password, user.password)) {
+      const token = jwt.sign({ id: user.id, email: user.email }, JWT_SECRET, { expiresIn: '7d' });
+      return res.json({ token, user: { email: user.email } });
+    }
+    res.status(401).json({ error: 'Invalid credentials or DB error' });
   }
-
-  if (!user) return res.status(401).json({ error: 'Invalid credentials' });
-
-  const isMatch = await bcrypt.compare(password, user.password);
-  if (!isMatch) return res.status(401).json({ error: 'Invalid credentials' });
-
-  const token = jwt.sign({ id: user._id || user.id, email: user.email }, JWT_SECRET, { expiresIn: '7d' });
-  res.json({ token, user: { email: user.email } });
 });
 
 // Projects API
 app.get('/api/projects', async (req, res) => {
-  if (isMongoDB) {
-    const projects = await ProjectModel.find().sort({ createdAt: -1 });
-    res.json(projects);
-  } else {
-    const db = await getLocalDB();
-    res.json(db.projects.sort((a: any, b: any) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()));
+  try {
+    if (isMongoDBConnected) {
+      const projects = await ProjectModel.find().sort({ createdAt: -1 }).maxTimeMS(2000);
+      return res.json(projects);
+    }
+  } catch (err) {
+    console.error("MongoDB fetch projects failed", err);
   }
+  const db = await getLocalDB();
+  res.json(db.projects.sort((a: any, b: any) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()));
 });
 
 app.post('/api/projects', authenticate, async (req, res) => {
-  if (isMongoDB) {
-    const project = new ProjectModel(req.body);
-    await project.save();
-    res.json(project);
-  } else {
-    const db = await getLocalDB();
-    const newProject = { _id: Date.now().toString(), ...req.body, createdAt: new Date().toISOString() };
-    db.projects.push(newProject);
-    await saveLocalDB(db);
-    res.json(newProject);
+  try {
+    if (isMongoDBConnected) {
+      const project = new ProjectModel(req.body);
+      await project.save();
+      return res.json(project);
+    }
+  } catch (err) {
+    console.error("MongoDB save project failed", err);
   }
+  const db = await getLocalDB();
+  const newProject = { _id: Date.now().toString(), ...req.body, createdAt: new Date().toISOString() };
+  db.projects.push(newProject);
+  await saveLocalDB(db);
+  res.json(newProject);
 });
 
 app.delete('/api/projects/:id', authenticate, async (req, res) => {
-  if (isMongoDB) {
-    await ProjectModel.findByIdAndDelete(req.params.id);
-  } else {
-    const db = await getLocalDB();
-    db.projects = db.projects.filter((p: any) => p._id !== req.params.id);
-    await saveLocalDB(db);
+  try {
+    if (isMongoDBConnected) {
+      await ProjectModel.findByIdAndDelete(req.params.id);
+      return res.json({ success: true });
+    }
+  } catch (err) {
+    console.error("MongoDB delete project failed", err);
   }
+  const db = await getLocalDB();
+  db.projects = db.projects.filter((p: any) => p._id !== req.params.id);
+  await saveLocalDB(db);
   res.json({ success: true });
 });
 
 // Blog API
 app.get('/api/blog', async (req, res) => {
-  if (isMongoDB) {
-    const posts = await BlogModel.find().sort({ createdAt: -1 });
-    res.json(posts);
-  } else {
-    const db = await getLocalDB();
-    res.json(db.blog.sort((a: any, b: any) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()));
+  try {
+    if (isMongoDBConnected) {
+      const posts = await BlogModel.find().sort({ createdAt: -1 }).maxTimeMS(2000);
+      return res.json(posts);
+    }
+  } catch (err) {
+    console.error("MongoDB fetch blog failed", err);
   }
+  const db = await getLocalDB();
+  res.json(db.blog.sort((a: any, b: any) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()));
 });
 
 app.post('/api/blog', authenticate, async (req, res) => {
-  if (isMongoDB) {
-    const post = new BlogModel(req.body);
-    await post.save();
-    res.json(post);
-  } else {
-    const db = await getLocalDB();
-    const newPost = { _id: Date.now().toString(), ...req.body, createdAt: new Date().toISOString() };
-    db.blog.push(newPost);
-    await saveLocalDB(db);
-    res.json(newPost);
+  try {
+    if (isMongoDBConnected) {
+      const post = new BlogModel(req.body);
+      await post.save();
+      return res.json(post);
+    }
+  } catch (err) {
+    console.error("MongoDB save blog failed", err);
   }
+  const db = await getLocalDB();
+  const newPost = { _id: Date.now().toString(), ...req.body, createdAt: new Date().toISOString() };
+  db.blog.push(newPost);
+  await saveLocalDB(db);
+  res.json(newPost);
 });
 
 app.delete('/api/blog/:id', authenticate, async (req, res) => {
-  if (isMongoDB) {
-    await BlogModel.findByIdAndDelete(req.params.id);
-  } else {
-    const db = await getLocalDB();
-    db.blog = db.blog.filter((p: any) => p._id !== req.params.id);
-    await saveLocalDB(db);
+  try {
+    if (isMongoDBConnected) {
+      await BlogModel.findByIdAndDelete(req.params.id);
+      return res.json({ success: true });
+    }
+  } catch (err) {
+    console.error("MongoDB delete blog failed", err);
   }
+  const db = await getLocalDB();
+  db.blog = db.blog.filter((p: any) => p._id !== req.params.id);
+  await saveLocalDB(db);
   res.json({ success: true });
 });
 
@@ -211,20 +249,25 @@ async function setupAdmin() {
   const adminPassword = process.env.ADMIN_PASSWORD || 'admin123';
   const hashedPassword = await bcrypt.hash(adminPassword, 10);
 
-  if (isMongoDB) {
-    const existing = await UserModel.findOne({ email: adminEmail });
-    if (!existing) {
-      await new UserModel({ email: adminEmail, password: hashedPassword }).save();
-      console.log('Admin user created in MongoDB');
+  if (isMongoDBConnected) {
+    try {
+      const existing = await UserModel.findOne({ email: adminEmail }).maxTimeMS(2000);
+      if (!existing) {
+        await new UserModel({ email: adminEmail, password: hashedPassword }).save();
+        console.log('Admin user created in MongoDB');
+      }
+    } catch (err) {
+      console.error("Admin setup in MongoDB failed", err);
     }
-  } else {
-    const db = await getLocalDB();
-    const existing = db.users.find((u: any) => u.email === adminEmail);
-    if (!existing) {
-      db.users.push({ id: '1', email: adminEmail, password: hashedPassword });
-      await saveLocalDB(db);
-      console.log('Admin user created in Local JSON');
-    }
+  }
+  
+  // Always ensure admin exists in local DB as well
+  const db = await getLocalDB();
+  const existingLocal = db.users.find((u: any) => u.email === adminEmail);
+  if (!existingLocal) {
+    db.users.push({ id: '1', email: adminEmail, password: hashedPassword });
+    await saveLocalDB(db);
+    console.log('Admin user created in Local JSON');
   }
 }
 
