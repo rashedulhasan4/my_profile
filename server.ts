@@ -13,12 +13,10 @@ dotenv.config();
 const app = express();
 const PORT = 3000;
 const JWT_SECRET = process.env.JWT_SECRET || 'fallback_secret';
-const MONGODB_URI = process.env.MONGODB_URI;
-const DB_FILE = path.join(process.cwd(), 'db.json');
-
 // Database Mode: MongoDB or Local JSON
 let isMongoDBConnected = false;
 const MONGODB_URI = process.env.MONGODB_URI;
+const DB_FILE = path.join(process.cwd(), 'db.json');
 
 if (MONGODB_URI && MONGODB_URI.startsWith('mongodb') && !MONGODB_URI.includes('<user>')) {
   mongoose.connect(MONGODB_URI, { serverSelectionTimeoutMS: 5000 })
