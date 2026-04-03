@@ -1,30 +1,24 @@
+import { useState, useEffect } from 'react';
 import { motion } from 'motion/react';
 import { Code2, Database, Layout, Terminal } from 'lucide-react';
 
-const skillCategories = [
-  {
-    title: 'Languages',
-    icon: <Code2 size={24} />,
-    skills: ['JavaScript', 'TypeScript', 'Python', 'Go', 'SQL', 'HTML/CSS']
-  },
-  {
-    title: 'Frameworks & Libraries',
-    icon: <Layout size={24} />,
-    skills: ['React', 'Next.js', 'Node.js', 'Express', 'Tailwind CSS', 'Framer Motion']
-  },
-  {
-    title: 'Databases',
-    icon: <Database size={24} />,
-    skills: ['PostgreSQL', 'MongoDB', 'Redis', 'Firebase', 'Prisma', 'Supabase']
-  },
-  {
-    title: 'Tools & Platforms',
-    icon: <Terminal size={24} />,
-    skills: ['Git', 'Docker', 'AWS', 'Vercel', 'Netlify', 'Postman']
-  }
-];
+const iconMap: any = {
+  Code2: <Code2 size={24} />,
+  Layout: <Layout size={24} />,
+  Database: <Database size={24} />,
+  Terminal: <Terminal size={24} />,
+};
 
 export default function Skills() {
+  const [categories, setCategories] = useState<any[]>([]);
+
+  useEffect(() => {
+    fetch('/api/skills')
+      .then(res => res.json())
+      .then(setCategories)
+      .catch(console.error);
+  }, []);
+
   return (
     <section id="skills" className="py-32 px-8 md:px-12 bg-slate-900/30">
       <div className="max-w-7xl mx-auto">
@@ -44,9 +38,9 @@ export default function Skills() {
         </motion.div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
-          {skillCategories.map((category, i) => (
+          {categories.map((category, i) => (
             <motion.div
-              key={category.title}
+              key={category.category}
               initial={{ opacity: 0, y: 20 }}
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
@@ -54,13 +48,13 @@ export default function Skills() {
               className="p-10 bg-slate-900 border border-slate-800 rounded-3xl hover:border-cyan-500/50 transition-all group"
             >
               <div className="text-cyan-400 mb-6 group-hover:scale-110 transition-transform">
-                {category.icon}
+                {iconMap[category.icon] || <Code2 size={24} />}
               </div>
               <h3 className="text-xl font-display font-bold text-white mb-6">
-                {category.title}
+                {category.category}
               </h3>
               <div className="flex flex-wrap gap-3">
-                {category.skills.map((skill) => (
+                {category.skills.map((skill: string) => (
                   <motion.span
                     key={skill}
                     whileHover={{ scale: 1.05 }}

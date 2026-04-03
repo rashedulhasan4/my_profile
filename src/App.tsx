@@ -11,7 +11,6 @@ import Projects from './components/Projects';
 import Skills from './components/Skills';
 import Experience from './components/Experience';
 import Blog from './components/Blog';
-import Testimonials from './components/Testimonials';
 import CTA from './components/CTA';
 import Footer from './components/Footer';
 import Dashboard from './components/Dashboard';
@@ -27,7 +26,6 @@ function Portfolio() {
         <Skills />
         <Experience />
         <Blog />
-        <Testimonials />
         <CTA />
       </main>
       <Footer />

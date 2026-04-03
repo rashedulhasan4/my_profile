@@ -3,7 +3,7 @@ import { Download, FileText } from 'lucide-react';
 
 export default function CTA() {
   return (
-    <section className="py-32 px-8 md:px-12 bg-slate-900/30">
+    <section id="resume" className="py-32 px-8 md:px-12 bg-slate-900/30">
       <div className="max-w-7xl mx-auto">
         <motion.div
           initial={{ opacity: 0, scale: 0.95 }}

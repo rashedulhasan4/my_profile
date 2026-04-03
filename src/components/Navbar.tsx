@@ -9,15 +9,15 @@ const navLinks = [
   { name: 'Projects', href: '#projects' },
   { name: 'Skills', href: '#skills' },
   { name: 'Experience', href: '#experience' },
-  { name: 'Blog', href: '#blog', active: true },
-  { name: 'Testimonials', href: '#testimonials' },
-  { name: 'Contact', href: '#contact' },
+  { name: 'Blog', href: '#blog' },
   { name: 'Resume', href: '#resume', highlight: true },
+  { name: 'Contact', href: '#contact' },
 ];
 
 export default function Navbar() {
   const [isOpen, setIsOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
+  const [activeSection, setActiveSection] = useState('home');
 
   useEffect(() => {
     const handleScroll = () => {
@@ -25,6 +25,32 @@ export default function Navbar() {
     };
     window.addEventListener('scroll', handleScroll);
     return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
+
+  useEffect(() => {
+    const observerOptions = {
+      root: null,
+      rootMargin: '-20% 0px -70% 0px',
+      threshold: 0,
+    };
+
+    const observerCallback = (entries: IntersectionObserverEntry[]) => {
+      entries.forEach((entry) => {
+        if (entry.isIntersecting) {
+          setActiveSection(entry.target.id);
+        }
+      });
+    };
+
+    const observer = new IntersectionObserver(observerCallback, observerOptions);
+
+    const sections = ['home', 'about', 'projects', 'skills', 'experience', 'blog', 'resume', 'contact'];
+    sections.forEach((id) => {
+      const element = document.getElementById(id);
+      if (element) observer.observe(element);
+    });
+
+    return () => observer.disconnect();
   }, []);
 
   return (
@@ -53,7 +79,7 @@ export default function Navbar() {
                 href={link.href}
                 className={cn(
                   'px-4 py-2 text-sm font-medium transition-all rounded-full whitespace-nowrap',
-                  link.active 
+                  activeSection === link.href.substring(1)
                     ? 'bg-[#3a1c1c] border border-[#ff4b4b]/30 text-white' 
                     : link.highlight
                     ? 'text-[#ff4b4b] hover:text-[#ff4b4b]/80'
@@ -91,7 +117,7 @@ export default function Navbar() {
                     onClick={() => setIsOpen(false)}
                     className={cn(
                       'px-4 py-3 text-base font-medium rounded-2xl transition-colors',
-                      link.active 
+                      activeSection === link.href.substring(1)
                         ? 'bg-[#3a1c1c] border border-[#ff4b4b]/30 text-white' 
                         : link.highlight
                         ? 'text-[#ff4b4b]'

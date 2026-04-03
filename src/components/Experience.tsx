@@ -1,49 +1,17 @@
+import { useState, useEffect } from 'react';
 import { motion } from 'motion/react';
 import { ExternalLink } from 'lucide-react';
 
-const experiences = [
-  {
-    title: 'Senior Full Stack Developer',
-    company: 'Tech Innovations Inc.',
-    companyUrl: '#',
-    location: 'San Francisco, CA',
-    date: '2022 - Present',
-    description: [
-      'Led the development of a high-traffic e-commerce platform using Next.js and Node.js.',
-      'Implemented automated CI/CD pipelines, reducing deployment time by 40%.',
-      'Mentored a team of 5 junior developers, fostering a culture of code quality and best practices.',
-      'Optimized database queries, resulting in a 30% improvement in application performance.'
-    ]
-  },
-  {
-    title: 'Full Stack Developer',
-    company: 'Creative Solutions Studio',
-    companyUrl: '#',
-    location: 'New York, NY',
-    date: '2020 - 2022',
-    description: [
-      'Developed and maintained multiple client projects using React, Express, and MongoDB.',
-      'Collaborated with designers to implement pixel-perfect, responsive user interfaces.',
-      'Integrated third-party APIs for payment processing, social media, and analytics.',
-      'Participated in agile development processes, including daily stand-ups and sprint planning.'
-    ]
-  },
-  {
-    title: 'Junior Web Developer',
-    company: 'StartUp Hub',
-    companyUrl: '#',
-    location: 'Austin, TX',
-    date: '2018 - 2020',
-    description: [
-      'Assisted in the development of a real-time collaboration tool using React and Socket.io.',
-      'Fixed bugs and implemented new features based on user feedback.',
-      'Gained experience in writing clean, modular, and well-documented code.',
-      'Learned and applied modern web development tools and workflows.'
-    ]
-  }
-];
-
 export default function Experience() {
+  const [experiences, setExperiences] = useState<any[]>([]);
+
+  useEffect(() => {
+    fetch('/api/experience')
+      .then(res => res.json())
+      .then(setExperiences)
+      .catch(console.error);
+  }, []);
+
   return (
     <section id="experience" className="py-32 px-8 md:px-12">
       <div className="max-w-7xl mx-auto">
@@ -96,7 +64,7 @@ export default function Experience() {
                   </div>
                 </div>
                 <ul className="space-y-3">
-                  {exp.description.map((item, j) => (
+                  {exp.description.map((item: string, j: number) => (
                     <li key={j} className="flex items-start gap-3 text-slate-400 text-sm">
                       <span className="mt-1.5 w-1.5 h-1.5 bg-cyan-500 rounded-full flex-shrink-0" />
                       {item}

@@ -1,7 +1,19 @@
+import { useState, useEffect } from 'react';
 import { motion } from 'motion/react';
 import { ArrowRight, Mail } from 'lucide-react';
 
 export default function Hero() {
+  const [data, setData] = useState<any>(null);
+
+  useEffect(() => {
+    fetch('/api/hero')
+      .then(res => res.json())
+      .then(setData)
+      .catch(console.error);
+  }, []);
+
+  if (!data) return null;
+
   return (
     <section
       id="home"
@@ -30,8 +42,8 @@ export default function Hero() {
             transition={{ delay: 0.3, duration: 0.5 }}
             className="text-6xl md:text-8xl font-display font-bold text-white tracking-tighter leading-[0.9] mb-6"
           >
-            ABHAY <br />
-            <span className="bg-clip-text text-transparent bg-gradient-to-r from-[#ff4b4b] to-red-600">PORTFOLIO</span>
+            {data.name} <br />
+            <span className="bg-clip-text text-transparent bg-gradient-to-r from-[#ff4b4b] to-red-600">{data.title}</span>
           </motion.h1>
           <motion.h2
             initial={{ opacity: 0 }}
@@ -39,7 +51,7 @@ export default function Hero() {
             transition={{ delay: 0.4 }}
             className="text-xl md:text-2xl font-medium text-slate-300 mb-8 max-w-lg"
           >
-            Full Stack Developer crafting high-performance digital experiences.
+            {data.subtitle}
           </motion.h2>
           <motion.p
             initial={{ opacity: 0 }}
@@ -47,7 +59,7 @@ export default function Hero() {
             transition={{ delay: 0.5 }}
             className="text-slate-400 text-lg mb-10 max-w-md"
           >
-            I build scalable, user-centric applications using modern web technologies. Let's turn your vision into reality.
+            {data.description}
           </motion.p>
 
           <motion.div
@@ -66,7 +78,7 @@ export default function Hero() {
             </a>
             <div className="flex items-center gap-3 text-slate-300 hover:text-[#ff4b4b] transition-colors">
               <Mail size={20} />
-              <span className="font-mono text-sm">hello@abhay.dev</span>
+              <span className="font-mono text-sm">{data.email}</span>
             </div>
           </motion.div>
         </motion.div>
