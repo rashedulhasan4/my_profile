@@ -15,21 +15,26 @@ const PORT = 3000;
 const JWT_SECRET = process.env.JWT_SECRET || 'fallback_secret';
 // Database Mode: MongoDB or Local JSON
 let isMongoDBConnected = false;
+let isConnecting = false;
 const MONGODB_URI = process.env.MONGODB_URI;
 const DB_FILE = path.join(process.cwd(), 'db.json');
 
-if (MONGODB_URI && MONGODB_URI.startsWith('mongodb') && !MONGODB_URI.includes('<user>')) {
-  mongoose.connect(MONGODB_URI, { serverSelectionTimeoutMS: 5000 })
-    .then(() => {
+async function connectDB() {
+  if (MONGODB_URI && MONGODB_URI.startsWith('mongodb') && !MONGODB_URI.includes('<user>')) {
+    isConnecting = true;
+    try {
+      await mongoose.connect(MONGODB_URI, { serverSelectionTimeoutMS: 5000 });
       isMongoDBConnected = true;
       console.log('Connected to MongoDB Atlas');
-    })
-    .catch(err => {
+    } catch (err) {
       isMongoDBConnected = false;
       console.error('MongoDB connection failed, falling back to Local JSON');
-    });
-} else {
-  console.log('Running in Local JSON mode (db.json)');
+    } finally {
+      isConnecting = false;
+    }
+  } else {
+    console.log('Running in Local JSON mode (db.json)');
+  }
 }
 
 // Schemas (for MongoDB)
@@ -107,11 +112,11 @@ async function getLocalDB() {
       blog: [], 
       users: [],
       hero: {
-        name: 'ABHAY',
-        title: 'PORTFOLIO',
-        subtitle: 'Full Stack Developer crafting high-performance digital experiences.',
-        description: "I build scalable, user-centric applications using modern web technologies. Let's turn your vision into reality.",
-        email: 'hello@abhay.dev'
+        name: 'Rashed',
+        title: 'Full Stack Developer',
+        subtitle: 'Crafting high-performance digital experiences.',
+        description: "I build scalable, user-centric applications using modern web technologies.",
+        email: process.env.ADMIN_EMAIL || 'hello@example.com'
       },
       about: {
         title: 'About Me',
@@ -202,6 +207,10 @@ const authenticate = (req: any, res: any, next: any) => {
 };
 
 // API Routes
+app.get('/api/db-status', (req, res) => {
+  res.json({ connected: isMongoDBConnected, connecting: isConnecting, mode: isMongoDBConnected ? 'mongodb' : 'local' });
+});
+
 app.post('/api/auth/login', async (req, res) => {
   const { email, password } = req.body;
   
@@ -492,5 +501,10 @@ async function setupAdmin() {
   }
 }
 
-setupAdmin();
-startServer();
+async function init() {
+  await connectDB();
+  await setupAdmin();
+  await startServer();
+}
+
+init();

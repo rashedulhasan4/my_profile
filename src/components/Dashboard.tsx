@@ -33,6 +33,7 @@ export default function Dashboard() {
   const [aboutData, setAboutData] = useState<any>(null);
   const [skillsData, setSkillsData] = useState<any[]>([]);
   const [experienceData, setExperienceData] = useState<any[]>([]);
+  const [dbStatus, setDbStatus] = useState<any>(null);
   
   const [formData, setFormData] = useState<any>({
     title: '',
@@ -69,13 +70,14 @@ export default function Dashboard() {
 
   const fetchData = async () => {
     try {
-      const [projRes, blogRes, heroRes, aboutRes, skillsRes, expRes] = await Promise.all([
+      const [projRes, blogRes, heroRes, aboutRes, skillsRes, expRes, statusRes] = await Promise.all([
         fetch('/api/projects'),
         fetch('/api/blog'),
         fetch('/api/hero'),
         fetch('/api/about'),
         fetch('/api/skills'),
-        fetch('/api/experience')
+        fetch('/api/experience'),
+        fetch('/api/db-status')
       ]);
       setProjects(await projRes.json());
       setBlogPosts(await blogRes.json());
@@ -83,6 +85,7 @@ export default function Dashboard() {
       setAboutData(await aboutRes.json());
       setSkillsData(await skillsRes.json());
       setExperienceData(await expRes.json());
+      setDbStatus(await statusRes.json());
     } catch (err) {
       console.error("Fetch error", err);
     }
@@ -269,7 +272,18 @@ export default function Dashboard() {
         <div className="flex flex-wrap items-center justify-between gap-6 mb-12">
           <div>
             <h1 className="text-4xl font-display font-bold mb-2">Dashboard<span className="text-[#ff4b4b]">.</span></h1>
-            <p className="text-slate-400">Welcome back, {user.email}</p>
+            <div className="flex items-center gap-4">
+              <p className="text-slate-400">Welcome back, {user.email}</p>
+              {dbStatus && (
+                <div className={cn(
+                  "flex items-center gap-2 px-3 py-1 rounded-full text-xs font-mono",
+                  dbStatus.connected ? "bg-green-500/10 text-green-500" : "bg-red-500/10 text-red-500"
+                )}>
+                  <div className={cn("w-2 h-2 rounded-full", dbStatus.connected ? "bg-green-500" : "bg-red-500")} />
+                  {dbStatus.connected ? "MongoDB Atlas Connected" : "Local JSON Mode (Ephemeral)"}
+                </div>
+              )}
+            </div>
           </div>
           <div className="flex items-center gap-4">
             <button
